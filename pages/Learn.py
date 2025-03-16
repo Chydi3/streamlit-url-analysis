@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+from urllib.parse import urlparse
+from datetime import datetime
 
 def learn_about_phishing_urls():
     st.title("📢 Learn About Phishing URLs")
@@ -19,7 +21,7 @@ def learn_about_phishing_urls():
         **Top-Level Domain (TLD)** | The ending of a domain name (.com, .org, .net, etc.). | `example.org` vs. `example.xyz` | Some phishing sites use uncommon TLDs.  
         """
         st.markdown(url_table)
-
+        
         st.subheader("How to Analyze a URL Step by Step")
         st.markdown("""
         1️⃣ **Look for HTTPS** – A secure site should have `https://`, but be aware that some phishing sites also use HTTPS.
@@ -32,7 +34,7 @@ def learn_about_phishing_urls():
         
         5️⃣ **Beware of Shortened URLs** – If you see `bit.ly/example`, use a URL expander to reveal the real link before clicking.
         """)
-
+    
     st.header("2️⃣ How Attackers Manipulate URLs")
     with st.expander("⚠️ Click to Expand: Common Phishing Techniques"):
         phishing_table = """
@@ -45,7 +47,7 @@ def learn_about_phishing_urls():
         **Homoglyph Attack** | `www.аpple.com` (Fake) vs. `www.apple.com` (Real) | Uses **foreign characters** that look identical to English letters. | Copy and paste the URL into a **plain text editor** to reveal hidden differences.  
         """
         st.markdown(phishing_table)
-
+    
     st.header("3️⃣ Test a URL for Phishing Risk")
     url_input = st.text_input("🔗 Enter a URL to check:")
     if url_input:
@@ -53,7 +55,7 @@ def learn_about_phishing_urls():
             st.warning("⚠️ This URL looks suspicious! Double-check before clicking.")
         else:
             st.success("✅ This URL does not appear suspicious, but always be cautious.")
-
+    
     st.header("4️⃣ How to Spot a Phishing URL Before Clicking")
     st.markdown("""
     ✅ **Hover Over the Link** – Check the real destination before clicking.  
@@ -61,7 +63,7 @@ def learn_about_phishing_urls():
     ✅ **Check for Misspellings** – Fake sites often have typos or extra letters.  
     ✅ **Be Wary of Urgency** – Phishing emails create panic (e.g., "Your account will be suspended in 24 hours!").  
     """)
-
+    
     st.header("5️⃣ What to Do If You Click a Phishing Link")
     st.markdown("""
     - ❌ **Do NOT enter any information.**  
@@ -69,9 +71,53 @@ def learn_about_phishing_urls():
     - 🔑 **Change your password** (if you entered login details).  
     - 📢 **Report the phishing site** (Google Safe Browsing, IT support, or your security team).  
     """)
-
-    # Simple Quiz
-    st.header("🎯 Quick Quiz: Test Your Knowledge")
+    
+    st.header("6️⃣ Interactive Learning Module")
+    st.markdown("This module provides hands-on learning about URL structure through three interactive tabs.")
+    # Create tabs for the interactive learning module
+    tab_hover, tab_feedback, tab_reflection = st.tabs(["Hover Over URL", "Real-Time URL Feedback", "Post-Quiz Reflection"])
+    
+    with tab_hover:
+        st.subheader("Hover Over URL")
+        st.write("Move your mouse over the parts of the URL to see explanations.")
+        st.markdown(
+            """
+            <style>
+            .url-part:hover {
+                background-color: yellow;
+                cursor: help;
+            }
+            </style>
+            <p>
+                <span class="url-part" title="Protocol: Indicates how the resource is accessed (e.g., https://)">https://</span>
+                <span class="url-part" title="Domain: The main website domain where resources are hosted (e.g., example.com)">example.com</span>
+                <span class="url-part" title="Path: Specific resource or page on the website (e.g., /login)">/login</span>
+            </p>
+            """,
+            unsafe_allow_html=True
+        )
+    
+    with tab_feedback:
+        st.subheader("Real-Time URL Feedback")
+        user_url = st.text_input("Enter a URL to analyze:", placeholder="https://example.com/login")
+        if user_url:
+            try:
+                parsed = urlparse(user_url)
+                st.write("### Parsed URL Components")
+                st.write(f"**Scheme:** {parsed.scheme}")
+                st.write(f"**Netloc (Domain):** {parsed.netloc}")
+                st.write(f"**Path:** {parsed.path}")
+            except Exception as e:
+                st.error(f"Error parsing URL: {e}")
+    
+    with tab_reflection:
+        st.subheader("Post-Quiz Reflection")
+        reflection = st.text_area("What strategies did you use to determine where the URL goes?", height=150)
+        if st.button("Submit Reflection"):
+            st.success("Thank you for your input!")
+            st.write("Your Reflection:", reflection)
+    
+    st.header("7️⃣ Quick Quiz: Test Your Knowledge")
     question = "Which of these URLs is safe to click?"
     options = ["paypal.security-login.com", "amazon-support.co", "support.google.com"]
     answer = st.radio(question, options)
@@ -81,9 +127,8 @@ def learn_about_phishing_urls():
             st.success("✅ Correct! 'support.google.com' is a legitimate Google subdomain.")
         else:
             st.error("❌ Incorrect! The other options use misleading subdomains to trick users.")
-
+    
     st.success("✅ Now that you've learned about phishing URLs, always stay alert online! 🚀")
-
 
 def read_url_report():
     st.title("📊 How to Read URL Reports")
@@ -153,7 +198,6 @@ def read_url_report():
 
     st.header("4️⃣ Comprehensive Risk Score Breakdown")
     with st.expander("🔍 Click to Expand: Detailed Risk Score Information"):
-        # Create a detailed table with risk components and descriptions
         breakdown_data = [
             {
                 "Risk Component": "Blacklist Status",
@@ -207,8 +251,7 @@ def read_url_report():
         ]
         breakdown_df = pd.DataFrame(breakdown_data)
         st.table(breakdown_df)
-    
-# Integrate both functions in Streamlit with sidebar navigation
+
 def main():
     st.sidebar.title("Navigation")
     page = st.sidebar.radio("Go to:", ["Learn About Phishing URLs", "Read URL Reports"])
@@ -220,4 +263,5 @@ def main():
     
 if __name__ == "__main__":
     main()
+
 

@@ -1,7 +1,7 @@
 import streamlit as st
 import random
-from pages.learn_page import learn
-from pages.quiz_page import quiz
+from pages.Learn import learn
+from pages.Quiz import quiz
 
 # Initialize session state
 if 'score' not in st.session_state:
