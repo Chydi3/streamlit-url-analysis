@@ -57,13 +57,12 @@ def main():
     st.subheader("Learn to analyze URLs and identify phishing threats!")
     
     # Display a high-quality security image from the provided URL
-    image_url = "https://media.istockphoto.com/id/1420039900/de/foto/cyber-security-ransomware-e-mail-phishing-verschl%C3%BCsselte-technologie-digitale-informationen.webp?s=2048x2048&w=is&k=20&c=5zxQEX6pyDy444BJg2VA4cPq4b9woYUDosaGRgnM7jw="
-    try:
-        response = requests.get(image_url, stream=True)
-        image = Image.open(response.raw)
-        st.image(image, caption="Stay Secure. Stay Informed.", use_container_width=True)
-    except Exception as e:
-        st.info("Image not found. Please check the image URL.")
+    st.image(
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f9/Padlock_icon_blue.svg/1920px-Padlock_icon_blue.svg.png",
+    caption="Stay Secure. Stay Informed.",
+    use_container_width=True
+)
+
     
     # Description
     st.write(
@@ -98,12 +97,7 @@ def main():
             '<a href="/home/al/my_streamlit_project/pages/Quiz_german.py" class="btn btn-german">German Student</a>',
             unsafe_allow_html=True
         )
-    
-    # URL readability search bar
-    st.header("🔎 Check a URL's Readability")
-    url_input = st.text_input("Enter a URL to analyze:")
-    if url_input:
-        st.write(f"Analyzing: {url_input}...")  # Replace with actual analysis logic if desired
+
 
 if __name__ == "__main__":
     main()

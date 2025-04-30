@@ -6,6 +6,35 @@ import random
 from collections import defaultdict
 import pandas as pd
 import plotly.express as px
+from io import BytesIO
+import base64
+import pygame
+
+# ------------------ Audio Setup ------------------
+def audio_to_base64(file_path: str) -> str:
+    with open(file_path, "rb") as f:
+        return base64.b64encode(f.read()).decode("utf-8")
+
+# Load WAV files from same directory as this script
+base_dir = os.path.dirname(__file__)
+SUCCESS_SOUND = audio_to_base64(os.path.join(base_dir, "success.wav"))
+ERROR_SOUND   = audio_to_base64(os.path.join(base_dir, "error.wav"))
+
+# Streamlit audio playback via hidden HTML <audio>
+def play_sound(sound_base64):
+    """Embed and autoplay a Base64-encoded WAV via an HTML tag."""
+    audio_html = f"""
+<audio autoplay="true" style="display:none">
+    <source src="data:audio/wav;base64,{sound_base64}" type="audio/wav">
+</audio>
+"""
+    st.markdown(audio_html, unsafe_allow_html=True)
+
+# (Optional) initialize pygame mixer if available
+try:
+    pygame.mixer.init()
+except:
+    pass
 
 # ------------------ Custom Rerun Function ------------------
 def rerun():
@@ -47,6 +76,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+
 # ------------------ Session State Initialization ------------------
 if "quiz_started" not in st.session_state:
     st.session_state.quiz_started = False
@@ -77,7 +107,7 @@ if "user_answers" not in st.session_state:
 if "sub_answers" not in st.session_state:
     st.session_state.sub_answers = []  # To store sub-question responses per quiz item
 if "show_timer" not in st.session_state:
-    st.session_state.show_timer = False
+    st.session_state.show_timer = False  # Not visible to gamers
 if "question_start_time" not in st.session_state:
     st.session_state.question_start_time = time.time()
 if "quiz_active" not in st.session_state:
@@ -158,10 +188,12 @@ def check_answer(user_answer, correct_answer):
         st.session_state.streak += 1
         st.session_state.is_correct = True
         st.session_state.feedback = f"✅ Correct! {phishing_questions[st.session_state.current_q]['explanation']}"
+        play_sound(SUCCESS_SOUND)
     else:
         st.session_state.streak = 0
         st.session_state.is_correct = False
         st.session_state.feedback = f"❌ Wrong! {phishing_questions[st.session_state.current_q]['explanation']}"
+        play_sound(ERROR_SOUND)
     
     st.session_state.user_answers.append({
         "question": phishing_questions[st.session_state.current_q]["question"],
@@ -206,7 +238,14 @@ def end_quiz():
     st.write(f"**Time Taken:** {format_time(elapsed_time)}")
     
     save_quiz_result()
-    
+
+    # --- Celebration Effect Based on Performance ---
+    accuracy = (st.session_state.score / len(phishing_questions)) * 100
+    if accuracy >= 70:
+        st.balloons()
+    else:
+        st.snow()
+
     st.write("### Summary Insights")
     if st.session_state.score == len(phishing_questions):
         st.write("🎉 Perfect score! You're a phishing detection expert!")
@@ -280,61 +319,63 @@ def end_quiz():
             reset_quiz_state()
             rerun()  # End quiz and return to welcome page
 
+# ------------------ phishing_quiz Definition ------------------  
 def phishing_quiz():
     if not st.session_state.quiz_active:
         st.write("Quiz has ended. Please restart to play again.")
         return
 
     st.title("🎯 URL Phishing Quiz")
-    
+
     # --- Animated Progress Bar for Quiz Progress ---
-    progress_percent = int((st.session_state.current_q / len(phishing_questions)) * 100)
-    st.progress(progress_percent)
-    
     q_index = st.session_state.current_q
-    if q_index < len(phishing_questions):
+    total_questions = len(phishing_questions)
+    progress_percent = int((q_index / total_questions) * 100)
+
+    with st.container():
+        st.markdown(f"**Progress:** {progress_percent}% complete")
+        st.progress(progress_percent)
+
+    # --- Display Question ---
+    if q_index < total_questions:
         question = phishing_questions[q_index]
-        st.write(f"**Question {q_index + 1} of {len(phishing_questions)}**")
+        
+        st.write(f"**Question {q_index + 1} of {total_questions}**")
+        
         st.markdown(
-            f'<p style="font-weight: bold; color: red;">URL: {question["url"]}</p>',
+            f"""
+            <div style='background-color: #d4edda; padding: 20px; border-radius: 10px; margin-bottom: 20px;'>
+                <h5 style='color: #155724;'>URL: {question["url"]}</h5>
+            </div>
+            """,
             unsafe_allow_html=True
         )
-        st.write(question["question"])
         
+        st.write(question["question"])
+
         # Main answer input
-        choice = st.radio("Select an answer:", question["options"], key=f"q{q_index}", disabled=st.session_state.answered)
+        choice = st.radio(
+            "Select an answer:",
+            question["options"],
+            key=f"q{q_index}",
+            disabled=st.session_state.answered
+        )
         
         if st.button("Submit", key=f"submit_{q_index}") and not st.session_state.answered:
             check_answer(choice, question["answer"])
-        
-        # Display feedback for main question if answered
+
+        # Display feedback after answering
         if st.session_state.answered:
             if st.session_state.is_correct:
                 st.success(st.session_state.feedback)
             else:
                 st.error(st.session_state.feedback)
-            
-            # If sub-questions exist for this question (only for q_index >= 2), show them after main answer feedback
-            if q_index >= 2 and "sub_questions" in question and not st.session_state.sub_answered:
-                st.write("#### Additional Questions:")
-                # Sub-question 1
-                sub_choice1 = st.radio(
-                    question["sub_questions"][0]["question"],
-                    question["sub_questions"][0]["options"],
-                    key=f"sub_q_{q_index}_0"
-                )
-                # Sub-question 2
-                sub_choice2 = st.radio(
-                    question["sub_questions"][1]["question"],
-                    question["sub_questions"][1]["options"],
-                    key=f"sub_q_{q_index}_1"
-                )
-                if st.button("Submit Additional Answers", key=f"submit_sub_{q_index}"):
-                    check_sub_answers([sub_choice1, sub_choice2])
-            
-            # Once main (and if applicable, sub) answers are provided, show Next Question button if sub-questions (if any) are answered
-            if (q_index < 2) or (q_index >= 2 and st.session_state.sub_answered):
-                st.button("Next Question", key=f"next_{q_index}", on_click=next_question)
+
+            st.button(
+                "Next Question",
+                key=f"next_{q_index}",
+                on_click=next_question
+            )
     else:
         end_quiz()
 
@@ -348,27 +389,26 @@ def custom_quiz():
         st.write("**Path:** /login")
 
 # ------------------ Full List of 14 Quiz Questions ------------------
-# For questions with index >= 2, we add sub_questions key with two sub questions.
 phishing_questions = [
     {
         "url": "https://google.de",
         "question": "When you type the above link into a web browser, what website would you see?",
-        "options": ["Amazon’s website", "Facebook’s website", "Twitter’s website", "A website which is not listed", "Other"],
+        "options": ["Amazon's website", "Facebook's website", "Twitter's website", "A website which is not listed", "Other"],
         "answer": "A website which is not listed",
         "explanation": "This is Google's German domain (google.de), not Amazon, Facebook, or Twitter."
     },
     {
         "url": "https://www.bahn.de",
         "question": "When you type the above link into a web browser, what website would you see?",
-        "options": ["Travel Buddy's website", "Flixbus’s website", "Booking's website", "Ebay’s website", "A website which is not listed", "Other"],
+        "options": ["Travel Buddy's website", "Flixbus's website", "Booking's website", "Ebay's website", "A website which is not listed", "Other"],
         "answer": "A website which is not listed",
         "explanation": "This is the official website of Deutsche Bahn (German railway service)."
     },
     {
         "url": "https://maengelmelder.Grossdorfberg.de",
         "question": "When you type the above link into a web browser, what website would you see?",
-        "options": ["Vogelsbrück’s website", "Maengelmelder’s website", "Grossdorfberg’s website", "A website which is not listed", "Other"],
-        "answer": "Grossdorfberg’s website",
+        "options": ["Vogelsbrück's website", "Maengelmelder's website", "Grossdorfberg's website", "A website which is not listed", "Other"],
+        "answer": "Grossdorfberg's website",
         "explanation": "Main domain: Grossdorfberg.de. 'maengelmelder' is a subdomain for their complaint service.",
         "sub_questions": [
             {
@@ -384,8 +424,8 @@ phishing_questions = [
     {
         "url": "https://buergerbeteiligung.Kleinbachhausen.de/",
         "question": "When you type the above link into a web browser, what website would you see?",
-        "options": ["Buergstadt’s website", "Kleinbachhausen’s website", "Buergerbeteiligung’s website", "A website which is not listed", "Other"],
-        "answer": "Kleinbachhausen’s website",
+        "options": ["Buergstadt's website", "Kleinbachhausen's website", "Buergerbeteiligung's website", "A website which is not listed", "Other"],
+        "answer": "Kleinbachhausen's website",
         "explanation": "Main domain: Kleinbachhausen.de. Subdomain: buergerbeteiligung (citizen participation).",
         "sub_questions": [
             {
@@ -401,8 +441,8 @@ phishing_questions = [
     {
         "url": "https://onlinedienste.Neukleindorf.de/",
         "question": "When you type the above link into a web browser, what website would you see?",
-        "options": ["Altbrück’s website", "Onlinedienste’s website", "Neukleindorf’s website", "A website which is not listed", "Other"],
-        "answer": "Neukleindorf’s website",
+        "options": ["Altbrück's website", "Onlinedienste's website", "Neukleindorf's website", "A website which is not listed", "Other"],
+        "answer": "Neukleindorf's website",
         "explanation": "Main domain: Neukleindorf.de. Subdomain: onlinedienste (online services).",
         "sub_questions": [
             {
@@ -418,8 +458,8 @@ phishing_questions = [
     {
         "url": "https://waldhof.ceasy.de/",
         "question": "When you type the above link into a web browser, what website would you see?",
-        "options": ["Schwanburg’s website", "Waldhof’s website", "Ceasy’s website", "A website which is not listed", "Other"],
-        "answer": "Waldhof’s website",
+        "options": ["Schwanburg's website", "Waldhof's website", "Ceasy's website", "A website which is not listed", "Other"],
+        "answer": "Waldhof's website",
         "explanation": "Main domain: waldhof.de. 'ceasy' is a subdomain (e.g., a service).",
         "sub_questions": [
             {
@@ -435,8 +475,8 @@ phishing_questions = [
     {
         "url": "https://langensteinburg.emsos.de/",
         "question": "When you type the above link into a web browser, what website would you see?",
-        "options": ["Langensteinburg’s website", "Rosenbach’s website", "Emsos’s website", "A website which is not listed", "Other"],
-        "answer": "Langensteinburg’s website",
+        "options": ["Langensteinburg's website", "Rosenbach's website", "Emsos's website", "A website which is not listed", "Other"],
+        "answer": "Langensteinburg's website",
         "explanation": "Main domain: langensteinburg.de. 'emsos' is a subdomain.",
         "sub_questions": [
             {
@@ -452,8 +492,8 @@ phishing_questions = [
     {
         "url": "https://dorfhausenstadt.anliegenmanagement.de/",
         "question": "When you type the above link into a web browser, what website would you see?",
-        "options": ["Anliegenmanagement’s website", "Dorfhausenstadt’s website", "Bergfeldenheim’s website", "A website which is not listed", "Other"],
-        "answer": "Dorfhausenstadt’s website",
+        "options": ["Anliegenmanagement's website", "Dorfhausenstadt's website", "Bergfeldenheim's website", "A website which is not listed", "Other"],
+        "answer": "Dorfhausenstadt's website",
         "explanation": "Main domain: dorfhausenstadt.de. 'anliegenmanagement' is a subdomain.",
         "sub_questions": [
             {
@@ -469,8 +509,8 @@ phishing_questions = [
     {
         "url": "https://grossdorfberg.maengelmelder.de",
         "question": "When you type the above link into a web browser, what website would you see?",
-        "options": ["Grossdorfberg’s website", "Maengelmelder’s website", "Vogelsbrück’s website", "A website which is not listed", "Other"],
-        "answer": "Maengelmelder’s website",
+        "options": ["Grossdorfberg's website", "Maengelmelder's website", "Vogelsbrück's website", "A website which is not listed", "Other"],
+        "answer": "Maengelmelder's website",
         "explanation": "Main domain: maengelmelder.de. 'grossdorfberg' is a subdomain.",
         "sub_questions": [
             {
@@ -486,7 +526,7 @@ phishing_questions = [
     {
         "url": "https://kleinbachhausen.buergerbeteiligung.de/",
         "question": "When you type the above link into a web browser, what website would you see?",
-        "options": ["Kleinbachhausen’s website", "Buergerbeteiligung’s website", "Buergstadt’s website", "A website which is not listed", "Other"],
+        "options": ["Kleinbachhausen's website", "Buergerbeteiligung's website", "Buergstadt's website", "A website which is not listed", "Other"],
         "answer": "A website which is not listed",
         "explanation": "Main domain: buergerbeteiligung.de (if unregistered). No valid website exists.",
         "sub_questions": [
@@ -503,8 +543,8 @@ phishing_questions = [
     {
         "url": "https://neukleindorf.onlinedienste.de/",
         "question": "When you type the above link into a web browser, what website would you see?",
-        "options": ["Onlinedienste’s website", "Neukleindorf’s website", "Altbrück’s website", "A website which is not listed", "Other"],
-        "answer": "Onlinedienste’s website",
+        "options": ["Onlinedienste's website", "Neukleindorf's website", "Altbrück's website", "A website which is not listed", "Other"],
+        "answer": "Onlinedienste's website",
         "explanation": "Main domain: onlinedienste.de. 'neukleindorf' is a subdomain.",
         "sub_questions": [
             {
@@ -520,8 +560,8 @@ phishing_questions = [
     {
         "url": "https://ceasy.waldhof.de/",
         "question": "When you type the above link into a web browser, what website would you see?",
-        "options": ["Schwanburg’s website", "Waldhof’s website", "Ceasy’s website", "A website which is not listed", "Other"],
-        "answer": "Waldhof’s website",
+        "options": ["Schwanburg's website", "Waldhof's website", "Ceasy's website", "A website which is not listed", "Other"],
+        "answer": "Waldhof's website",
         "explanation": "Main domain: waldhof.de. 'ceasy' is a subdomain (e.g., a service).",
         "sub_questions": [
             {
@@ -537,8 +577,8 @@ phishing_questions = [
     {
         "url": "https://emsos.langensteinburg.de/",
         "question": "When you type the above link into a web browser, what website would you see?",
-        "options": ["Langensteinburg’s website", "Rosenbach’s website", "Emsos’s website", "A website which is not listed", "Other"],
-        "answer": "Langensteinburg’s website",
+        "options": ["Langensteinburg's website", "Rosenbach's website", "Emsos's website", "A website which is not listed", "Other"],
+        "answer": "Langensteinburg's website",
         "explanation": "Main domain: langensteinburg.de. 'emsos' is a subdomain.",
         "sub_questions": [
             {
@@ -554,8 +594,8 @@ phishing_questions = [
     {
         "url": "https://anliegenmanagement.dorfhausenstadt.de/",
         "question": "When you type the above link into a web browser, what website would you see?",
-        "options": ["Anliegenmanagement’s website", "Dorfhausenstadt’s website", "Bergfeldenheim’s website", "A website which is not listed", "Other"],
-        "answer": "Dorfhausenstadt’s website",
+        "options": ["Anliegenmanagement's website", "Dorfhausenstadt's website", "Bergfeldenheim's website", "A website which is not listed", "Other"],
+        "answer": "Dorfhausenstadt's website",
         "explanation": "Main domain: dorfhausenstadt.de. 'anliegenmanagement' is a subdomain.",
         "sub_questions": [
             {
@@ -579,14 +619,12 @@ def main_app():
         welcome_page()
         st.stop()
     
-    # ------------------ Sidebar: Minimal User Info ------------------
+    # ------------------ Sidebar: Minimal User Info for Gamers ------------------
     st.sidebar.header("Welcome!")
     st.sidebar.write(f"### Welcome, {st.session_state.player_name}!")
-    st.session_state.show_timer = st.sidebar.checkbox("Enable Timer ⏳")
     
     # ------------------ Display the Quiz ------------------
     phishing_quiz()
 
 if __name__ == "__main__":
     main_app()
-
