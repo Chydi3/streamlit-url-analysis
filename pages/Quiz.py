@@ -357,6 +357,7 @@ def phishing_quiz():
         choice = st.radio(
             "Select an answer:",
             question["options"],
+            index=None,                           # ← no default selection
             key=f"q{q_index}",
             disabled=st.session_state.answered
         )
@@ -371,11 +372,12 @@ def phishing_quiz():
             else:
                 st.error(st.session_state.feedback)
 
-            st.button(
-                "Next Question",
-                key=f"next_{q_index}",
-                on_click=next_question
-            )
+             # Show Next only once they've answered
+            if st.button("Next Question", key=f"next_{q_index}", on_click=next_question):
+                pass
+        else:
+            # Warn if they try to proceed without answering
+            st.warning("🚨 Please select an answer before proceeding.")
     else:
         end_quiz()
 
