@@ -56,6 +56,8 @@ def reset_quiz_state():
     st.session_state.sub_answered = False
     st.session_state.quiz_active = True
     st.session_state.question_start_time = time.time()
+    # *** NEW: initialize per-question timer log
+    st.session_state.question_times = []
 
 # ------------------ Custom Background & Theming ------------------
 st.markdown(
@@ -112,6 +114,10 @@ if "question_start_time" not in st.session_state:
     st.session_state.question_start_time = time.time()
 if "quiz_active" not in st.session_state:
     st.session_state.quiz_active = True
+if "question_start_time" not in st.session_state:
+    st.session_state.question_start_time = time.time()
+if "question_times" not in st.session_state:
+    st.session_state.question_times = []
 if "sub_answered" not in st.session_state:
     st.session_state.sub_answered = False
 
@@ -125,12 +131,23 @@ def save_quiz_result():
     elapsed_time = time.time() - st.session_state.timer
     formatted_time = format_time(elapsed_time)
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+
+    # Serialize your per‑question timings into a semicolon‑delimited string
+    times_str = ";".join(f"{t:.1f}" for t in st.session_state.question_times)
     
     file_name = "quiz_results.csv"
     file_exists = os.path.isfile(file_name)
     with open(file_name, mode="a", newline="") as csv_file:
         writer = csv.writer(csv_file)
         if not file_exists:
+
+        # add your new header column "Per-Question Times (s)"
+            writer.writerow([
+                "Player Name", "Score", "Total Questions",
+                "Accuracy (%)", "Time Taken",
+                "Per-Question Times (s)",  # ← new header
+                "Timestamp"
+            ])
             writer.writerow(["Player Name", "Score", "Total Questions", "Accuracy (%)", "Time Taken", "Timestamp"])
         writer.writerow([player_name, score, total_questions, f"{accuracy:.2f}", formatted_time, timestamp])
 
@@ -183,6 +200,8 @@ def start_quiz():
     st.session_state.sub_answered = False
 
 def check_answer(user_answer, correct_answer):
+    elapsed = time.time() - st.session_state.question_start_time
+    st.session_state.question_times.append(elapsed)
     if user_answer == correct_answer:
         st.session_state.score += 1
         st.session_state.streak += 1

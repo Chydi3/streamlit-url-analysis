@@ -3,6 +3,25 @@ import pandas as pd
 import plotly.express as px
 from urllib.parse import urlparse
 from datetime import datetime
+import csv
+import os
+import time
+
+# --- Ensure session_state variables exist ---
+if "player_name" not in st.session_state:
+    st.session_state.player_name = "Guest"
+if "quiz_started" not in st.session_state:
+    st.session_state.quiz_started = False
+
+# … other imports …
+# ── ADD THIS ──
+if "learn_start_time" not in st.session_state:
+    st.session_state.learn_start_time = time.time()
+if "learn_clicks" not in st.session_state:
+    st.session_state.learn_clicks = 0
+def count_click():
+    st.session_state.learn_clicks += 1
+
 
 def learn_about_phishing_urls():
     st.title("📢 Learn About Phishing URLs")
@@ -49,7 +68,12 @@ def learn_about_phishing_urls():
         st.markdown(phishing_table)
     
     st.header("3️⃣ Test a URL for Phishing Risk")
-    url_input = st.text_input("🔗 Enter a URL to check:")
+    url_input = st.text_input(
+    "Enter a URL to analyze:",
+    key="learn_url_input",
+    on_change=count_click
+)
+
     if url_input:
         if "secure" in url_input or "login" in url_input or url_input.startswith("bit.ly"):
             st.warning("⚠️ This URL looks suspicious! Double-check before clicking.")
@@ -253,6 +277,10 @@ def read_url_report():
         st.table(breakdown_df)
 
 def main():
+    # if they've clicked “Start Quiz” already, drop into Quiz.py
+    if st.session_state.get("quiz_started", False):
+        st.stop()
+
     st.sidebar.title("Navigation")
     page = st.sidebar.radio("Go to:", ["Learn About Phishing URLs", "Read URL Reports"])
     
@@ -260,8 +288,39 @@ def main():
         learn_about_phishing_urls()
     elif page == "Read URL Reports":
         read_url_report()
+
     
 if __name__ == "__main__":
     main()
+
+    # ── ADD THIS AT THE VERY BOTTOM OF learn_about_phishing_urls() ──
+
+    st.write("---")
+    if st.button("🧠 Start Quiz"):
+        # 1) compute total learn time
+        total_time = time.time() - st.session_state.learn_start_time
+
+        # 2) append to learn_logs.csv
+        log_file = "learn_logs.csv"
+        header = ["User", "Learn Time (s)", "Learn Clicks", "Timestamp"]
+        exists = os.path.exists(log_file)
+        with open(log_file, "a", newline="") as f:
+            writer = csv.writer(f)
+            if not exists:
+                writer.writerow(header)
+            writer.writerow([
+                st.session_state.player_name,
+                f"{total_time:.1f}",
+                st.session_state.learn_clicks,
+                time.strftime("%Y-%m-%d %H:%M:%S")
+            ])
+
+        # 3) flip into quiz mode
+        st.session_state.quiz_started = True
+        st.switch_page("/home/al/my_streamlit_project/pages/Quiz.py")   # or the path/name of your quiz page
+
+
+    # ── END ADDITION ──
+
 
 
