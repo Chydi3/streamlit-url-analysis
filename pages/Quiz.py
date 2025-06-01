@@ -323,7 +323,7 @@ def end_quiz():
     # Button to go to Learn Page (redirects to Learn page)
     if st.button("Go to Learn Page"):
         st.session_state.quiz_started = False  # Reset so welcome page appears if needed
-        st.switch_page("/home/al/my_streamlit_project/pages/Learn.py")
+        st.switch_page("pages/Learn.py")  # ✅ Correct relative path
     
     # Restart Quiz: Reset state and go back to the welcome page (name input/start quiz)
     colA, colB = st.columns(2)

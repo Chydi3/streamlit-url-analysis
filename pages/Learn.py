@@ -13,21 +13,26 @@ if "player_name" not in st.session_state:
 if "quiz_started" not in st.session_state:
     st.session_state.quiz_started = False
 
-# … other imports …
 # ── ADD THIS ──
 if "learn_start_time" not in st.session_state:
     st.session_state.learn_start_time = time.time()
 if "learn_clicks" not in st.session_state:
     st.session_state.learn_clicks = 0
+
 def count_click():
     st.session_state.learn_clicks += 1
-
+# ── END ADDITION ──
 
 def learn_about_phishing_urls():
     st.title("📢 Learn About Phishing URLs")
     
     st.header("1️⃣ How to Read URLs")
-    with st.expander("🔍 Click to Expand: Understanding URL Components"):
+    # Replace expander with checkbox + conditional content
+    if st.checkbox(
+        "🔍 Click to Expand: Understanding URL Components",
+        key="expander_read_urls",
+        on_change=count_click
+    ):
         st.write("Understanding how to read a URL helps you identify legitimate websites and avoid phishing attempts. A URL consists of different parts, and phishing attacks often manipulate these to trick users.")
         url_table = """
         **URL Component** | **Definition** | **Example** | **Tip**  
@@ -55,7 +60,12 @@ def learn_about_phishing_urls():
         """)
     
     st.header("2️⃣ How Attackers Manipulate URLs")
-    with st.expander("⚠️ Click to Expand: Common Phishing Techniques"):
+    # Replace expander with checkbox + conditional content
+    if st.checkbox(
+        "⚠️ Click to Expand: Common Phishing Techniques",
+        key="expander_phishing_techniques",
+        on_change=count_click
+    ):
         phishing_table = """
         **Phishing Technique** | **Example** | **How It Tricks Users** | **Tip**  
         ------------------------ | ---------- | ---------------------- | ----  
@@ -69,11 +79,10 @@ def learn_about_phishing_urls():
     
     st.header("3️⃣ Test a URL for Phishing Risk")
     url_input = st.text_input(
-    "Enter a URL to analyze:",
-    key="learn_url_input",
-    on_change=count_click
-)
-
+        "Enter a URL to analyze:",
+        key="learn_url_input",
+        on_change=count_click
+    )
     if url_input:
         if "secure" in url_input or "login" in url_input or url_input.startswith("bit.ly"):
             st.warning("⚠️ This URL looks suspicious! Double-check before clicking.")
@@ -98,8 +107,12 @@ def learn_about_phishing_urls():
     
     st.header("6️⃣ Interactive Learning Module")
     st.markdown("This module provides hands-on learning about URL structure through three interactive tabs.")
-    # Create tabs for the interactive learning module
-    tab_hover, tab_feedback, tab_reflection = st.tabs(["Hover Over URL", "Real-Time URL Feedback", "Post-Quiz Reflection"])
+    # Create tabs for the interactive learning module (tabs themselves do not count clicks)
+    tab_hover, tab_feedback, tab_reflection = st.tabs([
+        "Hover Over URL", 
+        "Real-Time URL Feedback", 
+        "Post-Quiz Reflection"
+    ])
     
     with tab_hover:
         st.subheader("Hover Over URL")
@@ -123,7 +136,12 @@ def learn_about_phishing_urls():
     
     with tab_feedback:
         st.subheader("Real-Time URL Feedback")
-        user_url = st.text_input("Enter a URL to analyze:", placeholder="https://example.com/login")
+        user_url = st.text_input(
+            "Enter a URL to analyze:",
+            placeholder="https://example.com/login",
+            key="feedback_url_input",
+            on_change=count_click
+        )
         if user_url:
             try:
                 parsed = urlparse(user_url)
@@ -136,17 +154,29 @@ def learn_about_phishing_urls():
     
     with tab_reflection:
         st.subheader("Post-Quiz Reflection")
-        reflection = st.text_area("What strategies did you use to determine where the URL goes?", height=150)
-        if st.button("Submit Reflection"):
+        reflection = st.text_area(
+            "What strategies did you use to determine where the URL goes?",
+            height=150,
+            key="reflection_input",
+            on_change=count_click
+        )
+        if st.button("Submit Reflection", key="reflection_submit"):
+            # Counting a click for pressing this button as well
+            count_click()
             st.success("Thank you for your input!")
             st.write("Your Reflection:", reflection)
     
     st.header("7️⃣ Quick Quiz: Test Your Knowledge")
     question = "Which of these URLs is safe to click?"
     options = ["paypal.security-login.com", "amazon-support.co", "support.google.com"]
-    answer = st.radio(question, options)
-    
-    if st.button("Check Answer"):
+    answer = st.radio(
+        question,
+        options,
+        key="quiz_safe_click",
+        on_change=count_click
+    )
+    if st.button("Check Answer", key="quiz_check_answer"):
+        count_click()
         if answer == "support.google.com":
             st.success("✅ Correct! 'support.google.com' is a legitimate Google subdomain.")
         else:
@@ -158,7 +188,11 @@ def read_url_report():
     st.title("📊 How to Read URL Reports")
     
     st.header("1️⃣ Understanding URL Reports")
-    with st.expander("🔍 Click to Expand: Components of a URL Report"):
+    if st.checkbox(
+        "🔍 Click to Expand: Components of a URL Report",
+        key="expander_report_components",
+        on_change=count_click
+    ):
         st.markdown("""
         A URL report contains various security assessments that help determine if a URL is safe. Here are the key components:
         
@@ -171,7 +205,11 @@ def read_url_report():
         """)
     
     st.header("2️⃣ How to Interpret a URL Report")
-    with st.expander("📌 Click to Expand: Step-by-Step Guide"):
+    if st.checkbox(
+        "📌 Click to Expand: Step-by-Step Guide",
+        key="expander_report_guide",
+        on_change=count_click
+    ):
         st.markdown("""
         - **Blacklist Status:**  
           - *Not Blacklisted:* No known malicious activity.  
@@ -204,16 +242,21 @@ def read_url_report():
         """)
     
     st.header("3️⃣ Quick Quiz: Test Your Understanding")
-    question = "What does a high 'Path Risk Score' indicate?"
-    options = [
+    question2 = "What does a high 'Path Risk Score' indicate?"
+    options2 = [
         "The domain is blacklisted",
         "The URL contains a potentially risky file extension",
         "The website has an expired SSL certificate"
     ]
-    answer = st.radio(question, options)
-    
-    if st.button("Check Answer"):
-        if answer == "The URL contains a potentially risky file extension":
+    answer2 = st.radio(
+        question2,
+        options2,
+        key="quiz_path_risk",
+        on_change=count_click
+    )
+    if st.button("Check Answer (Report Quiz)", key="quiz_path_risk_button"):
+        count_click()
+        if answer2 == "The URL contains a potentially risky file extension":
             st.success("✅ Correct! A high path risk score often means the URL has a suspicious extension.")
         else:
             st.error("❌ Incorrect! Review the explanation and try again.")
@@ -221,7 +264,11 @@ def read_url_report():
     st.success("🚀 Now you know how to analyze a URL report! Stay cautious online.")
 
     st.header("4️⃣ Comprehensive Risk Score Breakdown")
-    with st.expander("🔍 Click to Expand: Detailed Risk Score Information"):
+    if st.checkbox(
+        "🔍 Click to Expand: Detailed Risk Score Information",
+        key="expander_risk_breakdown",
+        on_change=count_click
+    ):
         breakdown_data = [
             {
                 "Risk Component": "Blacklist Status",
@@ -289,7 +336,6 @@ def main():
     elif page == "Read URL Reports":
         read_url_report()
 
-    
 if __name__ == "__main__":
     main()
 
@@ -317,10 +363,6 @@ if __name__ == "__main__":
 
         # 3) flip into quiz mode
         st.session_state.quiz_started = True
-        st.switch_page("/home/al/my_streamlit_project/pages/Quiz.py")   # or the path/name of your quiz page
-
+        st.switch_page("pages/Quiz.py")   # relative path to Quiz.py in pages/
 
     # ── END ADDITION ──
-
-
-
