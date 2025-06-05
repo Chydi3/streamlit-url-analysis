@@ -1,5 +1,7 @@
 import streamlit as st
 import time
+import pandas as pd
+import os
 
 # ------------------ Quiz State Reset ------------------
 def reset_quiz_state():
@@ -14,6 +16,13 @@ def reset_quiz_state():
     st.session_state.sub_answered = False
     st.session_state.quiz_active = True
     st.session_state.question_start_time = time.time()
+
+# ------------------ Check for Duplicate Name ------------------
+def is_duplicate_name(name):
+    if os.path.exists("quiz_results.csv"):
+        df = pd.read_csv("quiz_results.csv")
+        return name.strip().lower() in df["Player Name"].str.lower().str.strip().tolist()
+    return False
 
 # ------------------ Main App ------------------
 def main():
@@ -103,83 +112,29 @@ def main():
         gap: 2rem;
         margin: 2rem 0;
     }
-    /* Custom button styling */
-    .learn-btn {
+    .learn-btn, .quiz-btn, .button-intl, .button-german {
         padding: 0.75rem 2rem;
         font-size: 1rem;
-        border: 2px solid #FFD700;
         border-radius: 8px;
         background-color: rgba(0,0,0,0.3);
-        color: #FFD700;
         cursor: pointer;
         transition: all 0.3s ease;
         font-weight: 600;
         width: 100%;
         text-align: center;
     }
-    .learn-btn:hover {
-        background-color: #FFD700;
-        color: #0a1929;
-        transform: scale(1.05);
-        box-shadow: 0 0 15px #FFD700;
-    }
-    .quiz-btn {
-        padding: 0.75rem 2rem;
-        font-size: 1rem;
-        border: 2px solid #FF6B6B;
-        border-radius: 8px;
-        background-color: rgba(0,0,0,0.3);
-        color: #FF6B6B;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        font-weight: 600;
-        width: 100%;
-        text-align: center;
-    }
-    .quiz-btn:hover {
-        background-color: #FF6B6B;
-        color: #0a1929;
-        transform: scale(1.05);
-        box-shadow: 0 0 15px #FF6B6B;
-    }
-    .button-intl {
-        padding: 0.75rem 2rem;
-        font-size: 1rem;
-        border: 2px solid #9B59B6;
-        border-radius: 8px;
-        background-color: rgba(0,0,0,0.3);
-        color: #9B59B6;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        font-weight: 600;
-        width: 100%;
-        text-align: center;
-    }
-    .button-intl:hover {
-        background-color: #9B59B6;
-        color: #0a1929;
-        transform: scale(1.05);
-        box-shadow: 0 0 15px #9B59B6;
-    }
-    .button-german {
-        padding: 0.75rem 2rem;
-        font-size: 1rem;
-        border: 2px solid #95A5A6;
-        border-radius: 8px;
-        background-color: rgba(0,0,0,0.3);
-        color: #95A5A6;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        font-weight: 600;
-        width: 100%;
-        text-align: center;
-    }
-    .button-german:hover {
-        background-color: #95A5A6;
-        color: #0a1929;
-        transform: scale(1.05);
-        box-shadow: 0 0 15px #95A5A6;
-    }
+    .learn-btn { border: 2px solid #FFD700; color: #FFD700; }
+    .learn-btn:hover { background-color: #FFD700; color: #0a1929; transform: scale(1.05); box-shadow: 0 0 15px #FFD700; }
+
+    .quiz-btn { border: 2px solid #FF6B6B; color: #FF6B6B; }
+    .quiz-btn:hover { background-color: #FF6B6B; color: #0a1929; transform: scale(1.05); box-shadow: 0 0 15px #FF6B6B; }
+
+    .button-intl { border: 2px solid #9B59B6; color: #9B59B6; }
+    .button-intl:hover { background-color: #9B59B6; color: #0a1929; transform: scale(1.05); box-shadow: 0 0 15px #9B59B6; }
+
+    .button-german { border: 2px solid #95A5A6; color: #95A5A6; }
+    .button-german:hover { background-color: #95A5A6; color: #0a1929; transform: scale(1.05); box-shadow: 0 0 15px #95A5A6; }
+
     .button-row {
         display: flex;
         justify-content: center;
@@ -198,13 +153,11 @@ def main():
     # Add version badge
     st.markdown('<div class="badge">v2.5</div>', unsafe_allow_html=True)
 
-    # Header Section
     st.markdown('<div class="big-title">🔐 CyberSecure: URL Readability & Phishing Awareness</div>', unsafe_allow_html=True)
     st.markdown('<div class="subtitle">Learn to detect phishing URLs and secure your web experience</div>', unsafe_allow_html=True)
 
-    # Name Entry Section
     st.markdown("<div class='input-container'>", unsafe_allow_html=True)
-    
+
     if "player_name" not in st.session_state:
         st.session_state.player_name = ""
 
@@ -215,54 +168,47 @@ def main():
         help="Required to start",
         label_visibility="collapsed"
     )
+
     st.markdown('</div>', unsafe_allow_html=True)
 
     if not name.strip():
         st.warning("⚠️ You must enter your name before proceeding.")
         return
 
-    # Enhanced glowing name effect
+    if is_duplicate_name(name):
+        st.error("❌ This name is already taken. Please choose a different one.")
+        return
+
     st.markdown(
         f"<div class='welcome-text'>Welcome, <span class='glowing-name'>{name}</span>!</div>", 
         unsafe_allow_html=True
     )
 
-    # Navigation Buttons with perfect alignment and glow
     st.markdown('<div class="button-row">', unsafe_allow_html=True)
-    
-    # Learn Button
-    if st.button("📚 Learn About Phishing", key="learn_btn", 
-                help="Start with the learning module"):
+
+    if st.button("📚 Learn About Phishing", key="learn_btn", help="Start with the learning module"):
         st.switch_page("pages/Learn.py")
-    st.markdown(
-        """
+
+    st.markdown("""
         <script>
         document.querySelector('[data-testid="baseButton-secondary"]').className = "learn-btn";
         </script>
-        """,
-        unsafe_allow_html=True
-    )
-    
-    # Quiz Button
-    if st.button("🧠 Take the Quiz", key="quiz_btn", 
-                help="Test your phishing detection skills"):
+    """, unsafe_allow_html=True)
+
+    if st.button("🧠 Take the Quiz", key="quiz_btn", help="Test your phishing detection skills"):
         st.switch_page("pages/Quiz.py")
-    st.markdown(
-        """
+
+    st.markdown("""
         <script>
         document.querySelectorAll('[data-testid="baseButton-secondary"]')[1].className = "quiz-btn";
         </script>
-        """,
-        unsafe_allow_html=True
-    )
-    
+    """, unsafe_allow_html=True)
+
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Student Type Section
     st.markdown("<div class='student-section'>", unsafe_allow_html=True)
-    st.markdown("<h4 style='text-align:center; color:#00ffe0;'>🎓 Are you an International or German student?</h4>", 
-                unsafe_allow_html=True)
-    
+    st.markdown("<h4 style='text-align:center; color:#00ffe0;'>🎓 Are you an International or German student?</h4>", unsafe_allow_html=True)
+
     col_intl, col_german = st.columns(2)
     with col_intl:
         st.markdown(

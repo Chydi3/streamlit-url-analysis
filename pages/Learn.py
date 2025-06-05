@@ -12,6 +12,10 @@ if "player_name" not in st.session_state:
     st.session_state.player_name = "Guest"
 if "quiz_started" not in st.session_state:
     st.session_state.quiz_started = False
+if "current_page" not in st.session_state:
+    st.session_state.current_page = ""
+if "learn_metrics_logged" not in st.session_state:
+    st.session_state.learn_metrics_logged = False
 
 # Session state tracking for learning metrics
 if "learn_start_time" not in st.session_state:
@@ -19,8 +23,48 @@ if "learn_start_time" not in st.session_state:
 if "learn_clicks" not in st.session_state:
     st.session_state.learn_clicks = 0
 
+# Track which checkboxes/radios have been interacted with
+if "expander_read_urls" not in st.session_state:
+    st.session_state.expander_read_urls = False
+if "expander_phishing_techniques" not in st.session_state:
+    st.session_state.expander_phishing_techniques = False
+if "learn_url_input" not in st.session_state:
+    st.session_state.learn_url_input = ""
+if "feedback_url_input" not in st.session_state:
+    st.session_state.feedback_url_input = ""
+if "reflection_input" not in st.session_state:
+    st.session_state.reflection_input = ""
+if "quiz_safe_click" not in st.session_state:
+    st.session_state.quiz_safe_click = ""
+if "expander_report_components" not in st.session_state:
+    st.session_state.expander_report_components = False
+if "expander_report_guide" not in st.session_state:
+    st.session_state.expander_report_guide = False
+if "quiz_path_risk" not in st.session_state:
+    st.session_state.quiz_path_risk = ""
+if "expander_risk_breakdown" not in st.session_state:
+    st.session_state.expander_risk_breakdown = False
+
 def count_click():
     st.session_state.learn_clicks += 1
+
+def log_learning_metrics():
+    if not st.session_state.learn_metrics_logged:
+        total_time = time.time() - st.session_state.learn_start_time
+        log_file = "learn_logs.csv"
+        header = ["User", "Learn Time (s)", "Learn Clicks", "Timestamp"]
+        exists = os.path.exists(log_file)
+        with open(log_file, "a", newline="") as f:
+            writer = csv.writer(f)
+            if not exists:
+                writer.writerow(header)
+            writer.writerow([
+                st.session_state.player_name,
+                f"{total_time:.1f}",
+                st.session_state.learn_clicks,
+                time.strftime("%Y-%m-%d %H:%M:%S")
+            ])
+        st.session_state.learn_metrics_logged = True
 
 # ====================== GOLD THEME DESIGN ======================
 st.markdown("""
@@ -196,15 +240,54 @@ h3 {
 </style>
 """, unsafe_allow_html=True)
 
+# ====================== LEARN-PAGE PROGRESS CALCULATION ======================
+def calculate_learn_progress():
+    # 6 interactive items on "Learn About Phishing URLs" page:
+    total_learn_items = 6
+    completed = 0
+    if st.session_state.expander_read_urls:
+        completed += 1
+    if st.session_state.expander_phishing_techniques:
+        completed += 1
+    if st.session_state.learn_url_input:
+        completed += 1
+    if st.session_state.feedback_url_input:
+        completed += 1
+    if st.session_state.reflection_input:
+        completed += 1
+    if st.session_state.quiz_safe_click:
+        completed += 1
+    return int((completed / total_learn_items) * 100)
+
+# ====================== REPORT-PAGE PROGRESS CALCULATION ======================
+def calculate_report_progress():
+    # 4 interactive items on "Read URL Reports" page:
+    total_report_items = 4
+    completed = 0
+    if st.session_state.expander_report_components:
+        completed += 1
+    if st.session_state.expander_report_guide:
+        completed += 1
+    if st.session_state.quiz_path_risk:
+        completed += 1
+    if st.session_state.expander_risk_breakdown:
+        completed += 1
+    return int((completed / total_report_items) * 100)
+
 # ====================== MAIN CONTENT ======================
 def learn_about_phishing_urls():
     # Add version badge
     st.markdown('<div class="badge">v2.1</div>', unsafe_allow_html=True)
     
+    # Show progress bar for Learn page
+    learn_pct = calculate_learn_progress()
+    st.markdown(f"**Learning Progress: {learn_pct}%**")
+    st.progress(learn_pct)
+
     st.title("📢 Learn About Phishing URLs")
     
     with st.container():
-        st.header("1️⃣ How to Read URLs")
+        st.header("1️⃣ How to Read URLs" + (" ✅" if st.session_state.expander_read_urls else ""))
         if st.checkbox(
             "🔍 Click to Expand: Understanding URL Components",
             key="expander_read_urls",
@@ -235,9 +318,9 @@ def learn_about_phishing_urls():
             
             5️⃣ **Beware of Shortened URLs** – If you see `bit.ly/example`, use a URL expander to reveal the real link before clicking.
             """)
-    
+
     with st.container():
-        st.header("2️⃣ How Attackers Manipulate URLs")
+        st.header("2️⃣ How Attackers Manipulate URLs" + (" ✅" if st.session_state.expander_phishing_techniques else ""))
         if st.checkbox(
             "⚠️ Click to Expand: Common Phishing Techniques",
             key="expander_phishing_techniques",
@@ -255,7 +338,7 @@ def learn_about_phishing_urls():
             st.markdown(phishing_table)
     
     with st.container():
-        st.header("3️⃣ Test a URL for Phishing Risk")
+        st.header("3️⃣ Test a URL for Phishing Risk" + (" ✅" if st.session_state.learn_url_input else ""))
         url_input = st.text_input(
             "Enter a URL to analyze:",
             key="learn_url_input",
@@ -286,7 +369,9 @@ def learn_about_phishing_urls():
         """)
     
     with st.container():
-        st.header("6️⃣ Interactive Learning Module")
+        st.header("6️⃣ Interactive Learning Module" + (
+            " ✅" if (st.session_state.feedback_url_input and st.session_state.reflection_input) else ""
+        ))
         st.markdown("This module provides hands-on learning about URL structure through three interactive tabs.")
         tab_hover, tab_feedback, tab_reflection = st.tabs([
             "Hover Over URL", 
@@ -347,7 +432,7 @@ def learn_about_phishing_urls():
                 st.write("Your Reflection:", reflection)
     
     with st.container():
-        st.header("7️⃣ Quick Quiz: Test Your Knowledge")
+        st.header("7️⃣ Quick Quiz: Test Your Knowledge" + (" ✅" if st.session_state.quiz_safe_click else ""))
         question = "Which of these URLs is safe to click?"
         options = ["paypal.security-login.com", "amazon-support.co", "support.google.com"]
         answer = st.radio(
@@ -369,25 +454,7 @@ def learn_about_phishing_urls():
     # Properly placed "Start Quiz" button at the end of the learning module
     st.write("---")
     if st.button("🧠 Start Quiz"):
-        # 1) compute total learn time
-        total_time = time.time() - st.session_state.learn_start_time
-
-        # 2) append to learn_logs.csv
-        log_file = "learn_logs.csv"
-        header = ["User", "Learn Time (s)", "Learn Clicks", "Timestamp"]
-        exists = os.path.exists(log_file)
-        with open(log_file, "a", newline="") as f:
-            writer = csv.writer(f)
-            if not exists:
-                writer.writerow(header)
-            writer.writerow([
-                st.session_state.player_name,
-                f"{total_time:.1f}",
-                st.session_state.learn_clicks,
-                time.strftime("%Y-%m-%d %H:%M:%S")
-            ])
-
-        # 3) flip into quiz mode
+        log_learning_metrics()
         st.session_state.quiz_started = True
         st.switch_page("pages/Quiz.py")
 
@@ -395,10 +462,15 @@ def read_url_report():
     # Add version badge
     st.markdown('<div class="badge">v2.1</div>', unsafe_allow_html=True)
     
+    # Show progress bar for Report page
+    report_pct = calculate_report_progress()
+    st.markdown(f"**Report Progress: {report_pct}%**")
+    st.progress(report_pct)
+
     st.title("📊 How to Read URL Reports")
     
     with st.container():
-        st.header("1️⃣ Understanding URL Reports")
+        st.header("1️⃣ Understanding URL Reports" + (" ✅" if st.session_state.expander_report_components else ""))
         if st.checkbox(
             "🔍 Click to Expand: Components of a URL Report",
             key="expander_report_components",
@@ -416,7 +488,7 @@ def read_url_report():
             """)
     
     with st.container():
-        st.header("2️⃣ How to Interpret a URL Report")
+        st.header("2️⃣ How to Interpret a URL Report" + (" ✅" if st.session_state.expander_report_guide else ""))
         if st.checkbox(
             "📌 Click to Expand: Step-by-Step Guide",
             key="expander_report_guide",
@@ -452,9 +524,9 @@ def read_url_report():
             - **Final Decision:**  
               - Indicates the overall assessment. An "Allow" suggests the URL is safe despite minor concerns.
             """)
-    
+
     with st.container():
-        st.header("3️⃣ Quick Quiz: Test Your Understanding")
+        st.header("3️⃣ Quick Quiz: Test Your Understanding" + (" ✅" if st.session_state.quiz_path_risk else ""))
         question2 = "What does a high 'Path Risk Score' indicate?"
         options2 = [
             "The domain is blacklisted",
@@ -473,12 +545,12 @@ def read_url_report():
                 st.success("✅ Correct! A high path risk score often means the URL has a suspicious extension.")
             else:
                 st.error("❌ Incorrect! Review the explanation and try again.")
-    
+
     with st.container():
         st.success("🚀 Now you know how to analyze a URL report! Stay cautious online.")
 
     with st.container():
-        st.header("4️⃣ Comprehensive Risk Score Breakdown")
+        st.header("4️⃣ Comprehensive Risk Score Breakdown" + (" ✅" if st.session_state.expander_risk_breakdown else ""))
         if st.checkbox(
             "🔍 Click to Expand: Detailed Risk Score Information",
             key="expander_risk_breakdown",
@@ -544,7 +616,15 @@ def main():
         st.stop()
 
     st.sidebar.title("Navigation")
+    previous_page = st.session_state.current_page
     page = st.sidebar.radio("Go to:", ["Learn About Phishing URLs", "Read URL Reports"])
+    
+    # Detect navigation away from learning page
+    if previous_page == "Learn About Phishing URLs" and page != "Learn About Phishing URLs":
+        log_learning_metrics()
+    
+    # Update current page in session state
+    st.session_state.current_page = page
     
     if page == "Learn About Phishing URLs":
         learn_about_phishing_urls()
