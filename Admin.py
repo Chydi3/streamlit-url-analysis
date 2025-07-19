@@ -14,6 +14,15 @@ def load_learn_logs():
     df.index += 1  # start indexing at 1
     return df
 
+# ── NEW HELPER: Load Click Logs ────────────────────────────────────────────────────
+def load_click_logs():
+    file_name = "click_logs.csv"
+    if not os.path.exists(file_name):
+        return None
+    df = pd.read_csv(file_name)
+    df.index += 1  # start indexing at 1
+    return df
+
 # ── RESET FUNCTIONS ───────────────────────────────────────────────────────────────
 def reset_quiz_results():
     """Delete the CSV file to clear all stored quiz results."""
@@ -32,6 +41,16 @@ def reset_learn_logs():
         st.success("✅ Learn logs have been reset.")
     else:
         st.info("ℹ️ No learn logs found to reset.")
+
+# ── NEW RESET FUNCTION: Click Logs ────────────────────────────────────────────────
+def reset_click_logs():
+    """Delete the CSV file to clear all click logs."""
+    file_name = "click_logs.csv"
+    if os.path.exists(file_name):
+        os.remove(file_name)
+        st.success("✅ Click logs have been reset.")
+    else:
+        st.info("ℹ️ No click logs found to reset.")
 
 # ── DASHBOARD METRIC HELPERS ───────────────────────────────────────────────────────
 def get_unique_players():
@@ -259,7 +278,7 @@ def admin_login():
 
 # ── DASHBOARD OVERVIEW ─────────────────────────────────────────────────────────────
 def show_dashboard():
-    st.markdown('<div class="badge">v1.0</div>', unsafe_allow_html=True)
+    st.markdown('<div class="badge">v1.1</div>', unsafe_allow_html=True)  # Updated version
     st.markdown('<p class="ops-title">OPERATIONAL OPS CENTER</p>', unsafe_allow_html=True)
     st.markdown('<p class="ops-subtitle">Real-Time Metrics & Activity</p>', unsafe_allow_html=True)
 
@@ -292,23 +311,26 @@ def show_dashboard():
 
     # Quick Actions Buttons
     st.subheader("⚡ Quick Actions")
-    qcol1, qcol2 = st.columns(2, gap="large")
+    qcol1, qcol2, qcol3 = st.columns(3, gap="medium")  # Added third column
     with qcol1:
         if st.button("🔄 Reset Quiz Results", use_container_width=True):
             reset_quiz_results()
     with qcol2:
         if st.button("🗑️ Reset Learn Logs", use_container_width=True):
             reset_learn_logs()
+    with qcol3:
+        if st.button("🖱️ Reset Click Logs", use_container_width=True):  # New button
+            reset_click_logs()
 
 # ── ADMIN PANEL MAIN ─────────────────────────────────────────────────────────────────
 def admin_panel():
     st.title("🛠️ Admin Panel")
     st.write("Welcome, **Admin**! Use the sidebar to navigate.")
 
-    # Sidebar navigation
+    # Sidebar navigation - UPDATED with Click Logs
     with st.sidebar:
         st.markdown("### ▶ Command Console")
-        nav_options = ["Dashboard", "Quiz Questions", "Player History", "Learn Logs", "Leaderboard"]
+        nav_options = ["Dashboard", "Quiz Questions", "Player History", "Learn Logs", "Click Logs", "Leaderboard"]  # Added Click Logs
         st.radio("Navigate", options=nav_options, key="admin_nav", label_visibility="collapsed")
         st.markdown("---")
         if st.button("🚪 Logout", use_container_width=True):
@@ -385,7 +407,50 @@ def admin_panel():
 
         if st.button("🗑️ Reset Learn Logs"):
             reset_learn_logs()
-
+            
+    # ── NEW SECTION: Click Logs ───────────────────────────────────────────────────────
+    elif st.session_state.admin_nav == "Click Logs":
+        st.subheader("🖱️ Click Interaction Logs")
+        st.markdown("Track participant interactions with learning materials")
+        
+        # Load click logs
+        df_clicks = load_click_logs()
+        
+        if df_clicks is not None:
+            # Show top 10 most clicked elements
+            top_elements = df_clicks["Element_ID"].value_counts().head(10)
+            if not top_elements.empty:
+                st.subheader("🔥 Top 10 Most Clicked Elements")
+                st.bar_chart(top_elements)
+            
+            # Show full data
+            st.subheader("📊 All Click Interactions")
+            df_clicks["Timestamp"] = pd.to_datetime(df_clicks["Timestamp"], unit="s")
+            df_clicks = df_clicks.sort_values("Timestamp", ascending=False)
+            st.dataframe(df_clicks)
+            
+            # Download button
+            csv_clicks = df_clicks.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                "⬇️ Download Click Logs CSV",
+                data=csv_clicks,
+                file_name="click_logs.csv",
+                mime="text/csv"
+            )
+            
+            # Stats section
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("Total Interactions", len(df_clicks))
+            with col2:
+                st.metric("Unique Participants", df_clicks["User"].nunique())
+        else:
+            st.info("ℹ️ No click logs available. Participants haven't interacted with learning materials yet.")
+        
+        # Reset button
+        if st.button("🗑️ Reset Click Logs", key="reset_click_logs"):
+            reset_click_logs()
+            
     elif st.session_state.admin_nav == "Leaderboard":
         st.subheader("🏆 Leaderboard")
         if "leaderboard" in st.session_state and st.session_state.leaderboard:

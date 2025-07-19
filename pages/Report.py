@@ -527,7 +527,7 @@ if st.session_state.report_generated:
             st.error("Failed to send email.")
 
 st.markdown("---")
-st.header("Chatbot")
+st.header("Chatbot- Coming Soon")
 chat_input = st.text_area("Ask a question:")
 if st.button("Submit Question"):
     if chat_input:

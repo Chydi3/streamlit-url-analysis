@@ -9,6 +9,7 @@ import plotly.express as px
 from io import BytesIO
 import base64
 import pygame
+from helpers import save_username_to_file, load_username_from_file
 
 # ------------------ Audio Setup ------------------
 def audio_to_base64(file_path: str) -> str:
@@ -82,8 +83,14 @@ st.markdown(
 # ------------------ Session State Initialization ------------------
 if "quiz_started" not in st.session_state:
     st.session_state.quiz_started = False
-if "player_name" not in st.session_state:
-    st.session_state.player_name = "Guest"
+# Preserve user-entered name from Home.py
+if "player_name" not in st.session_state or not st.session_state.player_name.strip():
+    st.session_state.player_name = load_username_from_file()
+    print(f"Loaded player name: {st.session_state.player_name}")
+
+
+# if "player_name" not in st.session_state or not st.session_state.player_name.strip():
+#     st.session_state.player_name = load_username_from_file()
 if "score" not in st.session_state:
     st.session_state.score = 0
 if "current_q" not in st.session_state:
@@ -179,11 +186,12 @@ def welcome_page():
     reset_quiz_state()
     
     st.title("Welcome to the URL Quiz & Learning Game!")
-    st.write("Before we begin, please enter your name or code.")
-    name_input = st.text_input("Enter your name or code:", value="Guest", key="welcome_name_input")
+    st.write("Click the play button.")
+    # name_input = st.text_input("Enter your name or code:", value="Guest", key="welcome_name_input")
     if st.button("Play Game"):
-        st.session_state.player_name = name_input
+        st.session_state.player_name = st.session_state.player_name
         st.session_state.quiz_started = True
+        st.switch_page("pages/Quiz.py")
 
 # ------------------ Quiz Functions ------------------
 def start_quiz():
@@ -477,10 +485,10 @@ phishing_questions = [
         ]
     },
     {
-        "url": "https://waldhof.ceasy.de/",
+        "url": "https://altbachstadt.ceasy.de/",
         "question": "When you type the above link into a web browser, what website would you see?",
-        "options": ["Schwanburg's website", "Waldhof's website", "Ceasy's website", "A website which is not listed", "Other"],
-        "answer": "Waldhof's website",
+        "options": ["Schwanburg's website", "altbachstadt's website", "Ceasy's website", "A website which is not listed", "Other"],
+        "answer": "altbachstadt's website",
         "explanation": "Main domain: waldhof.de. 'ceasy' is a subdomain (e.g., a service).",
         "sub_questions": [
             {
@@ -579,10 +587,10 @@ phishing_questions = [
         ]
     },
     {
-        "url": "https://ceasy.waldhof.de/",
+        "url": "https://ceasy.altbachstadt.de/",
         "question": "When you type the above link into a web browser, what website would you see?",
-        "options": ["Schwanburg's website", "Waldhof's website", "Ceasy's website", "A website which is not listed", "Other"],
-        "answer": "Waldhof's website",
+        "options": ["Schwanburg's website", "altbachstadt's website", "Ceasy's website", "A website which is not listed", "Other"],
+        "answer": "altbachstadt's website",
         "explanation": "Main domain: waldhof.de. 'ceasy' is a subdomain (e.g., a service).",
         "sub_questions": [
             {

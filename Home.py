@@ -2,6 +2,7 @@ import streamlit as st
 import time
 import pandas as pd
 import os
+from helpers import save_username_to_file, load_username_from_file
 
 # ------------------ Quiz State Reset ------------------
 def reset_quiz_state():
@@ -33,117 +34,159 @@ def main():
         initial_sidebar_state="expanded"
     )
 
-    # ------------- CUSTOM CSS ---------------------
+    # ------------- SYSTEM-COMPATIBLE CSS WITH GLOW EFFECTS ---------------------
     st.markdown("""
     <style>
+    /* System-compatible base styles */
     html, body, [class*="css"] {
-        background: linear-gradient(to bottom right, #0a1929, #142a45, #1d3b5a);
-        color: #f1f1f1;
         font-family: 'Segoe UI', sans-serif;
     }
+    
+    /* Glowing title (works in both modes) */
     .big-title {
         font-size: 2.8rem;
         font-weight: 700;
         text-align: center;
         margin-top: 0.5rem;
-        color: #00ffe0;
+        color: #00B4D8; /* Cyan-blue that works in both themes */
         animation: glow 2s ease-in-out infinite alternate;
-        text-shadow: 0 0 10px #00ffe0;
     }
+    
+    /* Glowing username */
+    .glowing-name {
+        color: #00B4D8;
+        font-weight: bold;
+        animation: glow 2s ease-in-out infinite alternate;
+    }
+    
+    /* Glow animation */
+    @keyframes glow {
+        from {
+            text-shadow: 0 0 5px #00B4D8, 0 0 10px #00B4D8;
+            opacity: 0.9;
+        }
+        to {
+            text-shadow: 0 0 15px #00B4D8, 0 0 25px #00B4D8;
+            opacity: 1;
+        }
+    }
+    
+    /* Subtitle */
     .subtitle {
         text-align: center;
         font-size: 1.2rem;
-        color: #88FFFF;
         margin-bottom: 2rem;
+        color: var(--text-color);
     }
+    
+    /* Input box */
     .name-box input {
-        background-color: rgba(30,30,30,0.5) !important;
-        color: #f1f1f1 !important;
         border-radius: 5px;
         padding: 0.75rem;
-        border: 1px solid #00ffe0;
+        border: 1px solid var(--primary-color);
         font-size: 1.1rem;
         width: 50%;
         margin: 0 auto;
         display: block;
+        background-color: var(--background-color);
     }
+    
+    /* Welcome text */
     .welcome-text {
         font-size: 1.8rem;
         text-align: center;
-        color: #00ffe0;
         margin: 1.5rem 0;
-        text-shadow: 0 0 5px #00ffe0;
+        color: var(--text-color);
     }
-    .glowing-name {
-        animation: glow 2s ease-in-out infinite alternate;
-        color: #00FFFF;
-        font-weight: bold;
-    }
+    
+    /* Student section */
     .student-section {
-        background-color: rgba(0,0,0,0.3);
         padding: 2rem;
         border-radius: 15px;
         margin: 2rem auto;
         width: 80%;
-        border: 1px solid #00ffe0;
-        box-shadow: 0 0 15px rgba(0, 255, 224, 0.2);
+        border: 1px solid var(--primary-color);
+        background-color: var(--background-color);
         text-align: center;
     }
+    
+    /* Version badge */
     .badge {
         position: absolute;
         top: 20px;
         right: 20px;
-        background-color: rgba(0,0,0,0.5);
         padding: 0.5rem 1.2rem;
         border-radius: 20px;
-        color: #00ffe0;
-        border: 1px solid #00ffe0;
+        border: 1px solid var(--primary-color);
         font-weight: bold;
         font-size: 1.1rem;
-        box-shadow: 0 0 10px rgba(0, 255, 224, 0.3);
+        background-color: var(--background-color);
     }
-    .input-container {
-        text-align: center;
-        margin: 1rem 0 2rem;
-    }
-    .nav-container {
-        display: flex;
-        justify-content: center;
-        gap: 2rem;
-        margin: 2rem 0;
-    }
-    .learn-btn, .quiz-btn, .button-intl, .button-german {
-        padding: 0.75rem 2rem;
-        font-size: 1rem;
-        border-radius: 8px;
-        background-color: rgba(0,0,0,0.3);
-        cursor: pointer;
-        transition: all 0.3s ease;
-        font-weight: 600;
-        width: 100%;
-        text-align: center;
-    }
-    .learn-btn { border: 2px solid #FFD700; color: #FFD700; }
-    .learn-btn:hover { background-color: #FFD700; color: #0a1929; transform: scale(1.05); box-shadow: 0 0 15px #FFD700; }
-
-    .quiz-btn { border: 2px solid #FF6B6B; color: #FF6B6B; }
-    .quiz-btn:hover { background-color: #FF6B6B; color: #0a1929; transform: scale(1.05); box-shadow: 0 0 15px #FF6B6B; }
-
-    .button-intl { border: 2px solid #9B59B6; color: #9B59B6; }
-    .button-intl:hover { background-color: #9B59B6; color: #0a1929; transform: scale(1.05); box-shadow: 0 0 15px #9B59B6; }
-
-    .button-german { border: 2px solid #95A5A6; color: #95A5A6; }
-    .button-german:hover { background-color: #95A5A6; color: #0a1929; transform: scale(1.05); box-shadow: 0 0 15px #95A5A6; }
-
+    
+    /* Button container */
     .button-row {
         display: flex;
         justify-content: center;
         gap: 30px;
         margin: 30px 0;
     }
-    @keyframes glow {
-        from { text-shadow: 0 0 5px #00ffe0, 0 0 10px #00ffe0; }
-        to   { text-shadow: 0 0 20px #00ffe0, 0 0 30px #00ffe0; }
+    
+    /* Button styles */
+    .learn-btn, .quiz-btn, .button-intl, .button-german {
+        padding: 0.75rem 2rem;
+        font-size: 1rem;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-weight: 600;
+        width: 100%;
+        text-align: center;
+        background-color: transparent;
+    }
+    
+    .learn-btn { 
+        border: 2px solid var(--primary-color); 
+        color: var(--primary-color); 
+    }
+    .learn-btn:hover { 
+        background-color: var(--primary-color); 
+        color: white; 
+        transform: scale(1.05); 
+    }
+    
+    .quiz-btn { 
+        border: 2px solid #FF6B6B; 
+        color: #FF6B6B; 
+    }
+    .quiz-btn:hover { 
+        background-color: #FF6B6B; 
+        color: white; 
+        transform: scale(1.05); 
+    }
+    
+    .button-intl { 
+        border: 2px solid #9B59B6; 
+        color: #9B59B6; 
+    }
+    .button-intl:hover { 
+        background-color: #9B59B6; 
+        color: white; 
+    }
+    
+    .button-german { 
+        border: 2px solid #95A5A6; 
+        color: #95A5A6; 
+    }
+    .button-german:hover { 
+        background-color: #95A5A6; 
+        color: white; 
+    }
+    
+    /* Hide sidebar elements */
+    [data-testid="stSidebar"],
+    [data-testid="collapsedControl"],
+    [data-testid="stBaseButton-headerNoPadding"] {
+        display: none;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -168,6 +211,8 @@ def main():
         help="Required to start",
         label_visibility="collapsed"
     )
+
+    save_username_to_file(name)
 
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -207,7 +252,7 @@ def main():
     st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("<div class='student-section'>", unsafe_allow_html=True)
-    st.markdown("<h4 style='text-align:center; color:#00ffe0;'>🎓 Are you an International or German student?</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='text-align:center;'>🎓 Are you an International or German student?</h4>", unsafe_allow_html=True)
 
     col_intl, col_german = st.columns(2)
     with col_intl:
@@ -226,3 +271,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
